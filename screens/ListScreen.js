@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 // Konu kartımızdaki adres (K16, varyant a: Blitz)
 const API_URL = 'https://api.chess.com/pub/leaderboards';
@@ -7,6 +7,8 @@ const API_URL = 'https://api.chess.com/pub/leaderboards';
 export default function ListScreen({ navigation }) {
   // Oyuncu listesini tutan durum (state). Başta boş dizi.
   const [oyuncular, setOyuncular] = useState([]);
+  // Arama kutusuna yazılan metni tutan durum. Başta boş.
+  const [arama, setArama] = useState('');
 
   // Veriyi API'den çeken fonksiyon
   async function veriyiCek() {
@@ -37,16 +39,39 @@ export default function ListScreen({ navigation }) {
     );
   }
 
+  // Aramaya göre süzülmüş liste. İki taraf da küçük harfe çevrilir,
+  // böylece arama büyük/küçük harfe duyarsız olur ("magnus" = "Magnus").
+  const suzulmusOyuncular = oyuncular.filter((oyuncu) =>
+    oyuncu.username.toLowerCase().includes(arama.toLowerCase())
+  );
+
   return (
-    <FlatList
-      data={oyuncular} // gösterilecek dizi
-      keyExtractor={(item) => String(item.player_id)} // her satırın anahtarı: player_id
-      renderItem={satirCiz} // her satırı çizen fonksiyon
-    />
+    <View style={styles.ekran}>
+      <TextInput
+        style={styles.aramaKutusu}
+        placeholder="Oyuncu ara..."
+        value={arama} // kutuda görünen metin
+        onChangeText={setArama} // her harf yazılınca arama durumunu güncelle
+      />
+      <FlatList
+        data={suzulmusOyuncular} // artık süzülmüş dizi gösteriliyor
+        keyExtractor={(item) => String(item.player_id)} // her satırın anahtarı: player_id
+        renderItem={satirCiz} // her satırı çizen fonksiyon
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  ekran: { flex: 1 }, // ekranın tamamını kapla
+  aramaKutusu: {
+    margin: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
   satir: {
     flexDirection: 'row', // öğeleri yan yana diz
     alignItems: 'center',
