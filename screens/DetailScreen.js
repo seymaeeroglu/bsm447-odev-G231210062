@@ -1,4 +1,9 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Button, Image, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Kaydedilen oyuncuları telefonda bu anahtar (isim) altında saklıyoruz
+const KAYIT_ANAHTARI = 'kaydedilenler';
 
 // Ülke adresinin son iki harfinden bayrak emojisi üretir.
 // Örnek: ".../country/US" → "US" → 🇺🇸
@@ -18,6 +23,34 @@ function trendOku(yon) {
 // Detay ekranı. Seçilen oyuncuyu route.params içinden alır (global değişken yok).
 export default function DetailScreen({ route }) {
   const { oyuncu } = route.params;
+  // Bu oyuncu kaydedilmiş mi? Düğmenin yazısı buna göre değişir.
+  const [kayitli, setKayitli] = useState(false);
+
+  // Ekran açılınca: kayıtlı listeyi oku, bu oyuncu içinde var mı bak
+  useEffect(() => {
+    async function kontrolEt() {
+      const metin = await AsyncStorage.getItem(KAYIT_ANAHTARI); // kayıtlı metni oku
+      const liste = metin ? JSON.parse(metin) : []; // metni diziye çevir (yoksa boş dizi)
+      setKayitli(liste.some((o) => o.player_id === oyuncu.player_id));
+    }
+    kontrolEt();
+  }, []);
+
+  // Düğmeye basınca: kayıtlıysa listeden çıkar, değilse listeye ekle
+  async function kaydetVeyaCikar() {
+    const metin = await AsyncStorage.getItem(KAYIT_ANAHTARI);
+    let liste = metin ? JSON.parse(metin) : [];
+
+    if (kayitli) {
+      liste = liste.filter((o) => o.player_id !== oyuncu.player_id); // bu oyuncu hariç hepsi
+    } else {
+      liste.push(oyuncu); // oyuncuyu listenin sonuna ekle
+    }
+
+    // AsyncStorage sadece metin saklar; diziyi JSON metnine çevirip kaydediyoruz
+    await AsyncStorage.setItem(KAYIT_ANAHTARI, JSON.stringify(liste));
+    setKayitli(!kayitli); // düğmenin yazısını değiştir
+  }
 
   return (
     <View style={styles.container}>
@@ -33,6 +66,11 @@ export default function DetailScreen({ route }) {
         Trend: {trendOku(oyuncu.trend_score.direction)} {oyuncu.trend_score.delta}
       </Text>
       <Text style={styles.bilgi}>Profil: {oyuncu.url}</Text>
+
+      <Button
+        title={kayitli ? 'Kaydedilenlerden çıkar' : 'Kaydet'}
+        onPress={kaydetVeyaCikar}
+      />
     </View>
   );
 }
